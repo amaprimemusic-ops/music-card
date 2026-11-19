@@ -148,8 +148,6 @@
     </div>
 
     <script>
-        // ここにスプレッドシートの「ウェブに公開（CSV）」URLを入れておくと、
-        // 初回アクセス時から自動で読み込まれます（画面の「シートURL設定」からも変更可能）。
         const DEFAULT_CSV_URL = "";
 
         const CACHE_KEY = "listening_memo_sheets_cache_v1";
@@ -216,14 +214,15 @@
         }
 
         function parseCSV(text) {
+            const cleanText = String(text || "").replace(/^\uFEFF/, "");
             const rows = [];
             let row = [];
             let field = "";
             let inQuotes = false;
 
-            for (let i = 0; i < text.length; i++) {
-                const ch = text[i];
-                const next = text[i + 1];
+            for (let i = 0; i < cleanText.length; i++) {
+                const ch = cleanText[i];
+                const next = cleanText[i + 1];
 
                 if (inQuotes) {
                     if (ch === '"' && next === '"') {
@@ -240,17 +239,13 @@
                     } else if (ch === ',') {
                         row.push(field);
                         field = "";
-                    } else if (ch === '
-' && next === '
-') {
+                    } else if (ch === '\r' && next === '\n') {
                         row.push(field);
                         rows.push(row);
                         row = [];
                         field = "";
                         i++;
-                    } else if (ch === '
-' || ch === '
-') {
+                    } else if (ch === '\n' || ch === '\r') {
                         row.push(field);
                         rows.push(row);
                         row = [];
@@ -350,9 +345,7 @@
 
         function formatMemoHtml(memoText) {
             if (!memoText) return '<p class="text-slate-500">（メモなし）</p>';
-            const lines = String(memoText).split(/
-?
-/);
+            const lines = String(memoText).split(/\r?\n/);
             return lines.map(line => {
                 const trimmed = line.trim();
                 if (!trimmed) return '<div class="h-1"></div>';
@@ -570,6 +563,13 @@
                     resetDeck();
                     drawCard();
                 } else {
+                    const refreshedCurrent = tracksData.find(t => t.no === currentItem.no && t.trackName === currentItem.trackName);
+                    if (refreshedCurrent) {
+                        currentItem = refreshedCurrent;
+                        if (historyIndex >= 0 && cardHistory[historyIndex]) {
+                            cardHistory[historyIndex] = refreshedCurrent;
+                        }
+                    }
                     undrawnIndices = tracksData
                         .map((_, idx) => idx)
                         .filter(idx => {
