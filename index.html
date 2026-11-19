@@ -613,17 +613,13 @@
                     } else if (ch === ',') {
                         row.push(field);
                         field = "";
-                    } else if (ch === '
-' && next === '
-') {
+                    } else if (ch === '\r' && next === '\n') {
                         row.push(field);
                         rows.push(row);
                         row = [];
                         field = "";
                         i++;
-                    } else if (ch === '
-' || ch === '
-') {
+                    } else if (ch === '\n' || ch === '\r') {
                         row.push(field);
                         rows.push(row);
                         row = [];
@@ -707,9 +703,7 @@
 
         function formatMemoHtml(memoText) {
             if (!memoText) return '<p class="memo-empty">（メモなし）</p>';
-            const lines = String(memoText).split(/
-?
-/);
+            const lines = String(memoText).split(/\r?\n/);
             return lines.map(line => {
                 const trimmed = line.trim();
                 if (!trimmed) return '<div></div>';
