@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ListeningMemo - Sheets Sync</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 16px;
+            min-height: 100vh;
+            background-color: #020617;
+            color: #f1f5f9;
+            font-family: -apple-system, BlinkMacSystemFont, "Noto Sans JP", "Inter", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+        .wrap {
+            width: 100%;
+            max-width: 448px;
+        }
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            gap: 8px;
+        }
+        .title-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        h1 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 700;
+            color: #818cf8;
+        }
+        .badge-only {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #022c22;
+            color: #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+        }
+        .hidden { display: none !important; }
+        .sub-info {
+            margin: 2px 0 0;
+            font-size: 11px;
+            color: #94a3b8;
+        }
+        .sub-info strong.total { color: #e2e8f0; }
+        .sub-info strong.rem { color: #a5b4fc; }
+        .sync-status {
+            margin: 1px 0 0;
+            font-size: 10px;
+            color: #64748b;
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .btn-mini {
+            padding: 4px 8px;
+            border-radius: 8px;
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        .btn-sync { color: #6ee7b7; }
+        .btn-reset { color: #94a3b8; }
+        .mode-group {
+            display: flex;
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 2px;
+            font-size: 11px;
+        }
+        .mode-btn {
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        .mode-active {
+            background: #4f46e5;
+            color: #ffffff;
+            font-weight: 600;
+        }
+        .mode-inactive {
+            background: transparent;
+            color: #94a3b8;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 8px 0;
+            gap: 16px;
+        }
+        .card {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 16px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+        }
+        .card-top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #6366f1, #a855f7, #10b981);
+        }
+        .meta-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .no-badge {
+            font-size: 11px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: #1e1b4b;
+            color: #a5b4fc;
+            border: 1px solid rgba(99, 102, 241, 0.35);
+        }
+        .meta-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .mood-badge {
+            font-size: 10px;
+            background: rgba(59, 7, 100, 0.8);
+            color: #d8b4fe;
+            border: 1px solid rgba(168, 85, 247, 0.35);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .texture-badge {
+            font-size: 10px;
+            background: rgba(12, 74, 110, 0.8);
+            color: #7dd3fc;
+            border: 1px solid rgba(14, 165, 233, 0.35);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .track-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.35;
+        }
+        .track-artist {
+            margin: 4px 0 0;
+            font-size: 12px;
+            color: #a5b4fc;
+            font-weight: 500;
+        }
+        .points-wrap {
+            margin-top: 8px;
+        }
+        .points-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .point-tag {
+            font-size: 10px;
+            background: rgba(30, 27, 75, 0.9);
+            color: #a5b4fc;
+            border: 1px solid rgba(99, 102, 241, 0.35);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .memo-box {
+            margin-top: 12px;
+            border-top: 1px solid rgba(30, 41, 59, 0.9);
+            padding-top: 10px;
+        }
+        .memo-label {
+            margin: 0 0 6px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #94a3b8;
+        }
+        .memo-content {
+            font-size: 12px;
+            color: #e2e8f0;
+            line-height: 1.6;
+            max-height: 208px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .memo-content p { margin: 0 0 6px; }
+        .memo-empty { color: #64748b; }
+        .memo-heading { color: #a5b4fc; font-weight: 700; }
+        .memo-arrow {
+            color: #6ee7b7;
+            font-weight: 500;
+            padding-left: 6px;
+            border-left: 2px solid rgba(16, 185, 129, 0.6);
+        }
+        .spotify-box {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(30, 41, 59, 0.9);
+        }
+        .spotify-box iframe {
+            width: 100%;
+            height: 80px;
+            border: 0;
+            border-radius: 12px;
+        }
+        .copy-row {
+            margin-top: 10px;
+            padding-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+        }
+        .copy-btn {
+            padding: 4px 10px;
+            border-radius: 8px;
+            background: #1e293b;
+            color: #e2e8f0;
+            border: none;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .actions {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .draw-btn {
+            width: 100%;
+            background: #4f46e5;
+            color: #ffffff;
+            font-weight: 700;
+            padding: 14px 24px;
+            border-radius: 16px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .back-btn {
+            width: 100%;
+            background: #0f172a;
+            color: #cbd5e1;
+            font-weight: 600;
+            padding: 10px 16px;
+            border-radius: 16px;
+            border: 1px solid #1e293b;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .disabled-btn {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+        footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 4px 0;
+            font-size: 10px;
+            color: #64748b;
+        }
+        .settings-link {
+            background: none;
+            border: none;
+            color: #818cf8;
+            font-size: 10px;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 50;
+        }
+        .modal-backdrop.open { display: flex; }
+        .modal-card {
+            width: 100%;
+            max-width: 448px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 20px;
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+        .modal-title {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .field-label {
+            display: block;
+            font-size: 11px;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+        }
+        .url-input {
+            width: 100%;
+            border-radius: 12px;
+            background: #020617;
+            border: 1px solid #334155;
+            padding: 8px 12px;
+            font-size: 12px;
+            color: #ffffff;
+        }
+        .field-note {
+            margin: 6px 0 0;
+            font-size: 10px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #cbd5e1;
+            margin-top: 14px;
+            cursor: pointer;
+        }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 16px;
+        }
+        .save-btn {
+            padding: 8px 16px;
+            border-radius: 12px;
+            background: #4f46e5;
+            color: #ffffff;
+            border: none;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="wrap">
+        <div>
+            <div class="title-row">
+                <h1>ListeningMemo</h1>
+                <span id="filter-badge" class="badge-only hidden">候補のみ</span>
+            </div>
+            <p class="sub-info">
+                対象: <strong id="total-count" class="total">0</strong>曲 / 残り <strong id="remaining-count" class="rem">0</strong>曲
+            </p>
+            <p id="sync-status" class="sync-status">未同期</p>
+        </div>
+        <div class="header-actions">
+            <button type="button" id="sync-btn" class="btn-mini btn-sync">同期</button>
+            <button type="button" id="reset-btn" class="btn-mini btn-reset">リセット</button>
+            <div class="mode-group">
+                <button type="button" id="mode-6-btn" class="mode-btn mode-active">全項目</button>
+                <button type="button" id="mode-3-btn" class="mode-btn mode-inactive">シンプル</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="wrap">
+        <div class="card">
+            <div class="card-top-bar"></div>
+
+            <div>
+                <div class="meta-row">
+                    <span id="card-no" class="no-badge">No. --</span>
+                    <div id="meta-badges" class="meta-badges">
+                        <span id="card-mood" class="mood-badge">mood: --</span>
+                        <span id="card-texture" class="texture-badge">texture: --</span>
+                    </div>
+                </div>
+
+                <div>
+                    <h2 id="card-title" class="track-title">読み込み中...</h2>
+                    <p id="card-artist" class="track-artist"></p>
+                </div>
+
+                <div id="points-wrapper" class="points-wrap">
+                    <div id="card-points" class="points-list"></div>
+                </div>
+
+                <div class="memo-box">
+                    <h3 class="memo-label">Listening Memo</h3>
+                    <div id="card-memo" class="memo-content"></div>
+                </div>
+            </div>
+
+            <div id="spotify-embed-container" class="spotify-box hidden">
+                <iframe id="spotify-iframe" allowtransparency="true" allow="encrypted-media"></iframe>
+            </div>
+
+            <div class="copy-row">
+                <button type="button" id="copy-query-btn" class="copy-btn">曲名・アーティストをコピー</button>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button id="draw-btn" type="button" class="draw-btn">
+                <span id="draw-btn-text">カードを引く</span>
+            </button>
+
+            <button id="back-btn" type="button" class="back-btn disabled-btn">
+                <span>前へ戻る</span>
+            </button>
+        </div>
+    </main>
+
+    <footer class="wrap">
+        <span>Google Sheets CSV Sync</span>
+        <button type="button" id="open-settings-btn" class="settings-link">シートURL設定</button>
+    </footer>
+
+    <div id="settings-modal" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 class="modal-title">スプレッドシート連携設定</h2>
+                <button type="button" id="close-settings-btn" class="close-btn">閉じる</button>
+            </div>
+            <div>
+                <label for="csv-url-input" class="field-label">公開CSV URL（ウェブに公開 → CSV）</label>
+                <input id="csv-url-input" type="url" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" class="url-input">
+                <p class="field-note">
+                    ※URLはブラウザの保存領域に記録されます。初期値としてコード内の DEFAULT_CSV_URL も利用可能です。
