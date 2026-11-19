@@ -420,7 +420,7 @@
         <div>
             <div class="title-row">
                 <h1>ListeningMemo</h1>
-                <span id="filter-badge" class="badge-only hidden">候補のみ</span>
+                <span id="filter-badge" class="badge-only">候補のみ</span>
             </div>
             <p class="sub-info">
                 対象: <strong id="total-count" class="total">0</strong>曲 / 残り <strong id="remaining-count" class="rem">0</strong>曲
@@ -524,9 +524,9 @@
 
         const DEFAULT_CSV_URL = "";
 
-        const CACHE_KEY = "listening_memo_sheets_cache_v4";
-        const STATE_KEY = "listening_memo_sheets_state_v4";
-        const CFG_KEY   = "listening_memo_sheets_cfg_v4";
+        const CACHE_KEY = "listening_memo_sheets_cache_v5";
+        const STATE_KEY = "listening_memo_sheets_state_v5";
+        const CFG_KEY   = "listening_memo_sheets_cfg_v5";
 
         let tracksData = [];
         let currentItem = null;
@@ -588,7 +588,7 @@
         }
 
         function parseCSV(text) {
-            const cleanText = String(text || "").replace(/^\uFEFF/, "");
+            const cleanText = String(text || "").replace(/^﻿/, "");
             const rows = [];
             let row = [];
             let field = "";
@@ -613,13 +613,15 @@
                     } else if (ch === ',') {
                         row.push(field);
                         field = "";
-                    } else if (ch === '\r' && next === '\n') {
+                    } else if (ch === '' && next === '
+') {
                         row.push(field);
                         rows.push(row);
                         row = [];
                         field = "";
                         i++;
-                    } else if (ch === '\n' || ch === '\r') {
+                    } else if (ch === '
+' || ch === '') {
                         row.push(field);
                         rows.push(row);
                         row = [];
@@ -703,7 +705,8 @@
 
         function formatMemoHtml(memoText) {
             if (!memoText) return '<p class="memo-empty">（メモなし）</p>';
-            const lines = String(memoText).split(/\r?\n/);
+            const lines = String(memoText).split(/?
+/);
             return lines.map(line => {
                 const trimmed = line.trim();
                 if (!trimmed) return '<div></div>';
@@ -737,7 +740,7 @@
 
             if (drawBtnText) {
                 if (tracksData.length === 0) {
-                    drawBtnText.textContent = 'データなし（シートURLを確認）';
+                    drawBtnText.textContent = 'データなし（シートURL・フラグを確認）';
                 } else if (historyIndex < cardHistory.length - 1) {
                     drawBtnText.textContent = '次の履歴へ進む';
                 } else if (undrawnIndices.length === 0) {
@@ -751,9 +754,9 @@
         function renderCard() {
             if (!currentItem) {
                 cardNo.textContent = "No. --";
-                cardTitle.textContent = "シートURLが未設定です";
-                cardArtist.textContent = "右下の「シートURL設定」から公開CSV URLを入力してください";
-                cardMemo.innerHTML = '<p class="memo-empty">スプレッドシートを「ウェブに公開（CSV）」にすると、HTMLを再アップロードせずに曲データを更新できます。</p>';
+                cardTitle.textContent = "対象データがありません";
+                cardArtist.textContent = "シートURLまたはフィルタ条件を確認してください";
+                cardMemo.innerHTML = '<p class="memo-empty">右下の「シートURL設定」から公開CSV URLや「ブログ候補のみ抽出」のチェック状態を確認してください。</p>';
                 spotifyEmbedContainer.classList.add('hidden');
                 spotifyIframe.src = "";
                 return;
@@ -901,7 +904,7 @@
                 const csvText = await res.text();
                 const rows = parseCSV(csvText);
                 const parsed = rowsToTracks(rows, cfg.blogOnly);
-                if (parsed.length === 0) throw new Error("有効な行が見つかりません");
+                if (parsed.length === 0) throw new Error("条件に合う行が見つかりません");
 
                 tracksData = parsed;
                 try {
