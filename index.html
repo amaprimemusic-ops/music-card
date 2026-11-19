@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ListeningMemo - Sheets Sync</title>
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 16px;
+            min-height: 100vh;
+            background-color: #020617;
+            color: #f1f5f9;
+            font-family: -apple-system, BlinkMacSystemFont, "Noto Sans JP", "Inter", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+        .wrap {
+            width: 100%;
+            max-width: 448px;
+        }
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            gap: 8px;
+        }
+        .title-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        h1 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 700;
+            color: #818cf8;
+        }
+        .badge-only {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #022c22;
+            color: #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+        }
+        .hidden { display: none !important; }
+        .sub-info {
+            margin: 2px 0 0;
+            font-size: 11px;
+            color: #94a3b8;
+        }
+        .sub-info strong.total { color: #e2e8f0; }
+        .sub-info strong.rem { color: #a5b4fc; }
+        .sync-status {
+            margin: 1px 0 0;
+            font-size: 10px;
+            color: #64748b;
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .btn-mini {
+            padding: 4px 8px;
+            border-radius: 8px;
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        .btn-sync { color: #6ee7b7; }
+        .btn-reset { color: #94a3b8; }
+        .mode-group {
+            display: flex;
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 2px;
+            font-size: 11px;
+        }
+        .mode-btn {
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        .mode-active {
+            background: #4f46e5;
+            color: #ffffff;
+            font-weight: 600;
+        }
+        .mode-inactive {
+            background: transparent;
+            color: #94a3b8;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 8px 0;
+            gap: 16px;
+        }
+        .card {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 16px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+        }
+        .card-top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #6366f1, #a855f7, #10b981);
+        }
+        .meta-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .no-badge {
+            font-size: 11px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: #1e1b4b;
+            color: #a5b4fc;
+            border: 1px solid rgba(99, 102, 241, 0.35);
+        }
+        .meta-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .mood-badge {
+            font-size: 10px;
+            background: rgba(59, 7, 100, 0.8);
+            color: #d8b4fe;
+            border: 1px solid rgba(168, 85, 247, 0.35);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .texture-badge {
+            font-size: 10px;
+            background: rgba(12, 74, 110, 0.8);
+            color: #7dd3fc;
+            border: 1px solid rgba(14, 165, 233, 0.35);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .track-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.35;
+        }
+        .track-artist {
+            margin: 4px 0 0;
+            font-size: 12px;
+            color: #a5b4fc;
+            font-weight: 500;
+        }
+        .points-wrap {
+            margin-top: 8px;
+        }
+        .points-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .point-tag {
+            font-size: 10px;
+            background: rgba(30, 27, 75, 0.9);
+            color: #a5b4fc;
+            border: 1px solid rgba(99, 102, 241, 0.35);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .memo-box {
+            margin-top: 12px;
+            border-top: 1px solid rgba(30, 41, 59, 0.9);
+            padding-top: 10px;
+        }
+        .memo-label {
+            margin: 0 0 6px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #94a3b8;
+        }
+        .memo-content {
+            font-size: 12px;
+            color: #e2e8f0;
+            line-height: 1.6;
+            max-height: 208px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .memo-content p { margin: 0 0 6px; }
+        .memo-empty { color: #64748b; }
+        .memo-heading { color: #a5b4fc; font-weight: 700; }
+        .memo-arrow {
+            color: #6ee7b7;
+            font-weight: 500;
+            padding-left: 6px;
+            border-left: 2px solid rgba(16, 185, 129, 0.6);
+        }
+        .spotify-box {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(30, 41, 59, 0.9);
+        }
+        .spotify-box iframe {
+            width: 100%;
+            height: 80px;
+            border: 0;
+            border-radius: 12px;
+        }
+        .copy-row {
+            margin-top: 10px;
+            padding-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+        }
+        .copy-btn {
+            padding: 4px 10px;
+            border-radius: 8px;
+            background: #1e293b;
+            color: #e2e8f0;
+            border: none;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .actions {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .draw-btn {
+            width: 100%;
+            background: #4f46e5;
+            color: #ffffff;
+            font-weight: 700;
+            padding: 14px 24px;
+            border-radius: 16px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .back-btn {
+            width: 100%;
+            background: #0f172a;
+            color: #cbd5e1;
+            font-weight: 600;
+            padding: 10px 16px;
+            border-radius: 16px;
+            border: 1px solid #1e293b;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .disabled-btn {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+        footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 4px 0;
+            font-size: 10px;
+            color: #64748b;
+        }
+        .settings-link {
+            background: none;
+            border: none;
+            color: #818cf8;
+            font-size: 10px;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 50;
+        }
+        .modal-backdrop.open { display: flex; }
+        .modal-card {
+            width: 100%;
+            max-width: 448px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 20px;
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+        .modal-title {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .field-label {
+            display: block;
+            font-size: 11px;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+        }
+        .url-input {
+            width: 100%;
+            border-radius: 12px;
+            background: #020617;
+            border: 1px solid #334155;
+            padding: 8px 12px;
+            font-size: 12px;
+            color: #ffffff;
+        }
+        .field-note {
+            margin: 6px 0 0;
+            font-size: 10px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #cbd5e1;
+            margin-top: 14px;
+            cursor: pointer;
+        }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 16px;
+        }
+        .save-btn {
+            padding: 8px 16px;
+            border-radius: 12px;
+            background: #4f46e5;
+            color: #ffffff;
+            border: none;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .error-banner {
+            width: 100%;
+            max-width: 448px;
+            background: #450a0a;
+            color: #fecaca;
+            border: 1px solid #991b1b;
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 11px;
+            margin-bottom: 8px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="error-banner" class="error-banner"></div>
+
+    <header class="wrap">
+        <div>
+            <div class="title-row">
+                <h1>ListeningMemo</h1>
+                <span id="filter-badge" class="badge-only">候補のみ</span>
+            </div>
+            <p class="sub-info">
+                対象: <strong id="total-count" class="total">0</strong>曲 / 残り <strong id="remaining-count" class="rem">0</strong>曲
+            </p>
+            <p id="sync-status" class="sync-status">未同期</p>
+        </div>
+        <div class="header-actions">
+            <button type="button" id="sync-btn" class="btn-mini btn-sync">同期</button>
+            <button type="button" id="reset-btn" class="btn-mini btn-reset">リセット</button>
+            <div class="mode-group">
+                <button type="button" id="mode-6-btn" class="mode-btn mode-active">全項目</button>
+                <button type="button" id="mode-3-btn" class="mode-btn mode-inactive">シンプル</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="wrap">
+        <div class="card">
+            <div class="card-top-bar"></div>
+
+            <div>
+                <div class="meta-row">
+                    <span id="card-no" class="no-badge">No. --</span>
+                    <div id="meta-badges" class="meta-badges">
+                        <span id="card-mood" class="mood-badge">mood: --</span>
+                        <span id="card-texture" class="texture-badge">texture: --</span>
+                    </div>
+                </div>
+
+                <div>
+                    <h2 id="card-title" class="track-title">読み込み中...</h2>
+                    <p id="card-artist" class="track-artist"></p>
+                </div>
+
+                <div id="points-wrapper" class="points-wrap">
+                    <div id="card-points" class="points-list"></div>
+                </div>
+
+                <div class="memo-box">
+                    <h3 class="memo-label">Listening Memo</h3>
+                    <div id="card-memo" class="memo-content"></div>
+                </div>
+            </div>
+
+            <div id="spotify-embed-container" class="spotify-box hidden">
+                <iframe id="spotify-iframe" allowtransparency="true" allow="encrypted-media"></iframe>
+            </div>
+
+            <div class="copy-row">
+                <button type="button" id="copy-query-btn" class="copy-btn">曲名・アーティストをコピー</button>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button id="draw-btn" type="button" class="draw-btn">
+                <span id="draw-btn-text">カードを引く</span>
+            </button>
+
+            <button id="back-btn" type="button" class="back-btn disabled-btn">
+                <span>前へ戻る</span>
+            </button>
+        </div>
+    </main>
+
+    <footer class="wrap">
+        <span>Google Sheets CSV Sync</span>
+        <button type="button" id="open-settings-btn" class="settings-link">シートURL設定</button>
+    </footer>
+
+    <div id="settings-modal" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 class="modal-title">スプレッドシート連携設定</h2>
+                <button type="button" id="close-settings-btn" class="close-btn">閉じる</button>
+            </div>
+            <div>
+                <label for="csv-url-input" class="field-label">公開CSV URL（ウェブに公開 → CSV）</label>
+                <input id="csv-url-input" type="url" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" class="url-input">
+                <p class="field-note">
+                    ※URLはブラウザの保存領域に記録されます。初期値としてコード内の DEFAULT_CSV_URL も利用可能です。
+                </p>
+            </div>
+            <label class="checkbox-row">
+                <input id="blog-only-checkbox" type="checkbox">
+                <span>ブログ候補のみ抽出（フラグ列が「ブログ候補」の行）</span>
+            </label>
+            <div class="modal-footer">
+                <button type="button" id="save-sync-btn" class="save-btn">保存して同期</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.onerror = function(msg, url, lineNo) {
+            var b = document.getElementById('error-banner');
+            if (b) {
+                b.style.display = 'block';
+                b.textContent = 'エラー: ' + msg + ' (行: ' + lineNo + ')';
+            }
+        };
+
+        const DEFAULT_CSV_URL = "";
+
+        const CACHE_KEY = "listening_memo_sheets_cache_v5";
+        const STATE_KEY = "listening_memo_sheets_state_v5";
+        const CFG_KEY   = "listening_memo_sheets_cfg_v5";
+
+        let tracksData = [];
+        let currentItem = null;
+        let cardHistory = [];
+        let historyIndex = -1;
+        let undrawnIndices = [];
+        let showAllFields = true;
+
+        const totalCountEl = document.getElementById('total-count');
+        const remainingCountEl = document.getElementById('remaining-count');
+        const syncStatusEl = document.getElementById('sync-status');
+        const filterBadgeEl = document.getElementById('filter-badge');
+
+        const cardNo = document.getElementById('card-no');
+        const cardTitle = document.getElementById('card-title');
+        const cardArtist = document.getElementById('card-artist');
+        const cardMood = document.getElementById('card-mood');
+        const cardTexture = document.getElementById('card-texture');
+        const cardPoints = document.getElementById('card-points');
+        const cardMemo = document.getElementById('card-memo');
+        const metaBadges = document.getElementById('meta-badges');
+        const pointsWrapper = document.getElementById('points-wrapper');
+        const spotifyEmbedContainer = document.getElementById('spotify-embed-container');
+        const spotifyIframe = document.getElementById('spotify-iframe');
+        const copyQueryBtn = document.getElementById('copy-query-btn');
+
+        const mode6Btn = document.getElementById('mode-6-btn');
+        const mode3Btn = document.getElementById('mode-3-btn');
+        const drawBtn = document.getElementById('draw-btn');
+        const drawBtnText = document.getElementById('draw-btn-text');
+        const backBtn = document.getElementById('back-btn');
+        const syncBtn = document.getElementById('sync-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        const settingsModal = document.getElementById('settings-modal');
+        const openSettingsBtn = document.getElementById('open-settings-btn');
+        const closeSettingsBtn = document.getElementById('close-settings-btn');
+        const csvUrlInput = document.getElementById('csv-url-input');
+        const blogOnlyCheckbox = document.getElementById('blog-only-checkbox');
+        const saveSyncBtn = document.getElementById('save-sync-btn');
+
+        function loadConfig() {
+            try {
+                const raw = localStorage.getItem(CFG_KEY);
+                const cfg = raw ? JSON.parse(raw) : {};
+                return {
+                    csvUrl: (cfg.csvUrl || DEFAULT_CSV_URL || "").trim(),
+                    blogOnly: Boolean(cfg.blogOnly)
+                };
+            } catch (e) {
+                return { csvUrl: DEFAULT_CSV_URL.trim(), blogOnly: false };
+            }
+        }
+
+        function saveConfig(cfg) {
+            try {
+                localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+            } catch (e) {}
+        }
+
+        function parseCSV(text) {
+            const cleanText = String(text || "").replace(/^\uFEFF/, "");
+            const rows = [];
+            let row = [];
+            let field = "";
+            let inQuotes = false;
+
+            for (let i = 0; i < cleanText.length; i++) {
+                const ch = cleanText[i];
+                const next = cleanText[i + 1];
+
+                if (inQuotes) {
+                    if (ch === '"' && next === '"') {
+                        field += '"';
+                        i++;
+                    } else if (ch === '"') {
+                        inQuotes = false;
+                    } else {
+                        field += ch;
+                    }
+                } else {
+                    if (ch === '"') {
+                        inQuotes = true;
+                    } else if (ch === ',') {
+                        row.push(field);
+                        field = "";
+                    } else if (ch === '
+' && next === '
+') {
+                        row.push(field);
+                        rows.push(row);
+                        row = [];
+                        field = "";
+                        i++;
+                    } else if (ch === '
+' || ch === '
+') {
+                        row.push(field);
+                        rows.push(row);
+                        row = [];
+                        field = "";
+                    } else {
+                        field += ch;
+                    }
+                }
+            }
+            if (field.length > 0 || row.length > 0) {
+                row.push(field);
+                rows.push(row);
+            }
+            return rows;
+        }
+
+        function rowsToTracks(rows, blogOnly) {
+            if (!rows || rows.length < 2) return [];
+            const headers = rows[0].map(h => String(h || "").trim());
+            const items = [];
+
+            for (let r = 1; r < rows.length; r++) {
+                const cells = rows[r];
+                if (!cells || cells.every(c => String(c || "").trim() === "")) continue;
+
+                const col = {};
+                headers.forEach((h, idx) => {
+                    if (h !== "") {
+                        col[h] = cells[idx] !== undefined ? String(cells[idx]).trim() : "";
+                    }
+                });
+
+                const no         = col["track no"] || "";
+                const trackName  = col["Track Name"] || "";
+                const artistName = col["Artist Name(s)"] || "";
+                const memo       = col["Listening Memo"] || "";
+                const points     = col["point"] || "";
+                const mood       = col["mood"] || "";
+                const texture    = col["texture"] || "";
+                const link       = col["Link"] || "";
+                const flag       = col["フラグ"] || "";
+
+                if (!no) continue;
+                if (!trackName && !artistName) continue;
+                if (flag === "除外") continue;
+                if (blogOnly && flag !== "ブログ候補") continue;
+
+                items.push({
+                    no,
+                    trackName,
+                    artistName,
+                    memo,
+                    points,
+                    mood,
+                    texture,
+                    spotifyId: extractSpotifyTrackId(link)
+                });
+            }
+            return items;
+        }
+
+        function extractSpotifyTrackId(val) {
+            const s = String(val || "").trim();
+            if (!s) return "";
+            const m1 = s.match(/open\.spotify\.com\/(?:intl-[a-z-]+\/)?track\/([a-zA-Z0-9]+)/);
+            if (m1) return m1[1];
+            const m2 = s.match(/spotify:track:([a-zA-Z0-9]+)/);
+            if (m2) return m2[1];
+            if (/^[a-zA-Z0-9]{20,24}$/.test(s)) return s;
+            return "";
+        }
+
+        function escapeHtml(str) {
+            return String(str || "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function formatMemoHtml(memoText) {
+            if (!memoText) return '<p class="memo-empty">（メモなし）</p>';
+            const lines = String(memoText).split(/
+?
+/);
+            return lines.map(line => {
+                const trimmed = line.trim();
+                if (!trimmed) return '<div></div>';
+                let safe = escapeHtml(trimmed);
+                safe = safe.replace(/(【[^】]+】)/g, '<strong class="memo-heading">$1</strong>');
+                if (trimmed.startsWith('→')) {
+                    return `<p class="memo-arrow">${safe}</p>`;
+                }
+                return `<p>${safe}</p>`;
+            }).join('');
+        }
+
+        function resetDeck() {
+            undrawnIndices = tracksData.map((_, idx) => idx);
+            if (tracksData.length > 1 && currentItem) {
+                const lastIdx = tracksData.findIndex(t => t.no === currentItem.no && t.trackName === currentItem.trackName);
+                if (lastIdx !== -1 && undrawnIndices.length > 1) {
+                    undrawnIndices = undrawnIndices.filter(i => i !== lastIdx);
+                }
+            }
+        }
+
+        function updateNavigationButtons() {
+            if (historyIndex > 0) {
+                backBtn.classList.remove('disabled-btn');
+            } else {
+                backBtn.classList.add('disabled-btn');
+            }
+            if (totalCountEl) totalCountEl.textContent = tracksData.length;
+            if (remainingCountEl) remainingCountEl.textContent = undrawnIndices.length;
+
+            if (drawBtnText) {
+                if (tracksData.length === 0) {
+                    drawBtnText.textContent = 'データなし（シートURL・フラグを確認）';
+                } else if (historyIndex < cardHistory.length - 1) {
+                    drawBtnText.textContent = '次の履歴へ進む';
+                } else if (undrawnIndices.length === 0) {
+                    drawBtnText.textContent = '全曲完了（最初から引き直す）';
+                } else {
+                    drawBtnText.textContent = 'カードを引く';
+                }
+            }
+        }
+
+        function renderCard() {
+            if (!currentItem) {
+                cardNo.textContent = "No. --";
+                cardTitle.textContent = "対象データがありません";
+                cardArtist.textContent = "シートURLまたはフィルタ条件を確認してください";
+                cardMemo.innerHTML = '<p class="memo-empty">右下の「シートURL設定」から公開CSV URLや「ブログ候補のみ抽出」のチェック状態を確認してください。</p>';
+                spotifyEmbedContainer.classList.add('hidden');
+                spotifyIframe.src = "";
+                return;
+            }
+
+            cardNo.textContent = `No. ${currentItem.no}`;
+            cardTitle.textContent = currentItem.trackName || '（タイトルなし）';
+            cardArtist.textContent = currentItem.artistName || '（アーティスト不明）';
+            cardMemo.innerHTML = formatMemoHtml(currentItem.memo);
+
+            if (showAllFields) {
+                metaBadges.classList.remove('hidden');
+                pointsWrapper.classList.remove('hidden');
+                cardMood.textContent = currentItem.mood ? `mood: ${currentItem.mood}` : 'mood: -';
+                cardTexture.textContent = currentItem.texture ? `texture: ${currentItem.texture}` : 'texture: -';
+
+                cardPoints.innerHTML = '';
+                if (currentItem.points) {
+                    currentItem.points.split(',').forEach(pt => {
+                        const t = pt.trim();
+                        if (!t) return;
+                        const span = document.createElement('span');
+                        span.className = 'point-tag';
+                        span.textContent = t;
+                        cardPoints.appendChild(span);
+                    });
+                }
+            } else {
+                metaBadges.classList.add('hidden');
+                pointsWrapper.classList.add('hidden');
+            }
+
+            if (currentItem.spotifyId) {
+                const targetSrc = `https://open.spotify.com/embed/track/${currentItem.spotifyId}`;
+                if (spotifyIframe.src !== targetSrc) {
+                    spotifyIframe.src = targetSrc;
+                }
+                spotifyEmbedContainer.classList.remove('hidden');
+            } else {
+                spotifyEmbedContainer.classList.add('hidden');
+                spotifyIframe.src = "";
+            }
+        }
+
+        function saveState() {
+            try {
+                localStorage.setItem(STATE_KEY, JSON.stringify({
+                    currentItem,
+                    cardHistory,
+                    historyIndex,
+                    undrawnIndices,
+                    showAllFields
+                }));
+            } catch (e) {}
+        }
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem(STATE_KEY);
+                if (!raw) return false;
+                const state = JSON.parse(raw);
+                if (!state || !state.currentItem || !Array.isArray(state.cardHistory) || state.cardHistory.length === 0) {
+                    return false;
+                }
+                currentItem = state.currentItem;
+                cardHistory = state.cardHistory;
+                historyIndex = typeof state.historyIndex === 'number' ? state.historyIndex : cardHistory.length - 1;
+                undrawnIndices = Array.isArray(state.undrawnIndices) ? state.undrawnIndices : [];
+                if (typeof state.showAllFields === 'boolean') {
+                    showAllFields = state.showAllFields;
+                    applyModeButtons();
+                }
+                updateNavigationButtons();
+                renderCard();
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function applyModeButtons() {
+            if (showAllFields) {
+                mode6Btn.className = "mode-btn mode-active";
+                mode3Btn.className = "mode-btn mode-inactive";
+            } else {
+                mode3Btn.className = "mode-btn mode-active";
+                mode6Btn.className = "mode-btn mode-inactive";
+            }
+        }
+
+        function drawCard() {
+            if (!tracksData || tracksData.length === 0) return;
+
+            if (historyIndex < cardHistory.length - 1) {
+                historyIndex++;
+                currentItem = cardHistory[historyIndex];
+                updateNavigationButtons();
+                renderCard();
+                saveState();
+                return;
+            }
+
+            if (undrawnIndices.length === 0) {
+                resetDeck();
+            }
+
+            const randPos = Math.floor(Math.random() * undrawnIndices.length);
+            const nextIdx = undrawnIndices.splice(randPos, 1)[0];
+            currentItem = tracksData[nextIdx];
+
+            cardHistory.push(currentItem);
+            historyIndex = cardHistory.length - 1;
+            updateNavigationButtons();
+            renderCard();
+            saveState();
+        }
+
+        function backCard() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                currentItem = cardHistory[historyIndex];
+                updateNavigationButtons();
+                renderCard();
+                saveState();
+            }
+        }
+
+        async function syncFromSheets(forceNewDeck = false) {
+            const cfg = loadConfig();
+            filterBadgeEl.classList.toggle('hidden', !cfg.blogOnly);
+
+            if (!cfg.csvUrl) {
+                syncStatusEl.textContent = "シートURL未設定";
+                updateNavigationButtons();
+                renderCard();
+                return;
+            }
+
+            syncStatusEl.textContent = "同期中...";
+            try {
+                const sep = cfg.csvUrl.includes("?") ? "&" : "?";
+                const fetchUrl = `${cfg.csvUrl}${sep}_t=${Date.now()}`;
+                const res = await fetch(fetchUrl, { cache: "no-store" });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const csvText = await res.text();
+                const rows = parseCSV(csvText);
+                const parsed = rowsToTracks(rows, cfg.blogOnly);
+                if (parsed.length === 0) throw new Error("条件に合う行が見つかりません");
+
+                tracksData = parsed;
+                try {
+                    localStorage.setItem(CACHE_KEY, JSON.stringify({
+                        tracks: tracksData,
+                        updatedAt: new Date().toISOString()
+                    }));
+                } catch (e) {}
+
+                const nowStr = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+                syncStatusEl.textContent = `同期済 (${nowStr})`;
+
+                if (forceNewDeck || !currentItem) {
+                    currentItem = null;
+                    cardHistory = [];
+                    historyIndex = -1;
+                    resetDeck();
+                    drawCard();
+                } else {
+                    const refreshedCurrent = tracksData.find(t => t.no === currentItem.no && t.trackName === currentItem.trackName);
+                    if (refreshedCurrent) {
+                        currentItem = refreshedCurrent;
+                        if (historyIndex >= 0 && cardHistory[historyIndex]) {
+                            cardHistory[historyIndex] = refreshedCurrent;
+                        }
+                    } else {
+                        currentItem = null;
+                    }
+                    undrawnIndices = tracksData
+                        .map((_, idx) => idx)
+                        .filter(idx => {
+                            const t = tracksData[idx];
+                            return !cardHistory.some(h => h.no === t.no && h.trackName === t.trackName);
+                        });
+                    if (!currentItem) {
+                        drawCard();
+                    } else {
+                        updateNavigationButtons();
+                        renderCard();
+                        saveState();
+                    }
+                }
+            } catch (err) {
+                syncStatusEl.textContent = `同期エラー (${err.message})`;
+                if (tracksData.length === 0) {
+                    try {
+                        const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
+                        if (cached && Array.isArray(cached.tracks) && cached.tracks.length > 0) {
+                            tracksData = cached.tracks;
+                            if (!loadState()) {
+                                resetDeck();
+                                drawCard();
+                            }
+                        }
+                    } catch (e) {}
+                }
+                updateNavigationButtons();
+                renderCard();
+            }
+        }
+
+        mode6Btn.addEventListener('click', () => {
+            showAllFields = true;
+            applyModeButtons();
+            renderCard();
+            saveState();
+        });
+
+        mode3Btn.addEventListener('click', () => {
+            showAllFields = false;
+            applyModeButtons();
+            renderCard();
+            saveState();
+        });
+
+        drawBtn.addEventListener('click', drawCard);
+        backBtn.addEventListener('click', backCard);
+        syncBtn.addEventListener('click', () => syncFromSheets(false));
+
+        resetBtn.addEventListener('click', () => {
+            localStorage.removeItem(STATE_KEY);
+            currentItem = null;
+            cardHistory = [];
+            historyIndex = -1;
+            resetDeck();
+            drawCard();
+        });
+
+        copyQueryBtn.addEventListener('click', async () => {
+            if (!currentItem) return;
+            const text = `${currentItem.artistName || ""} ${currentItem.trackName || ""}`.trim();
+            if (!text) return;
+            try {
+                await navigator.clipboard.writeText(text);
+                const orig = copyQueryBtn.textContent;
+                copyQueryBtn.textContent = "コピーしました";
+                setTimeout(() => { copyQueryBtn.textContent = orig; }, 1200);
+            } catch (e) {}
+        });
+
+        openSettingsBtn.addEventListener('click', () => {
+            const cfg = loadConfig();
+            csvUrlInput.value = cfg.csvUrl;
+            blogOnlyCheckbox.checked = cfg.blogOnly;
+            settingsModal.classList.add('open');
+        });
+
+        closeSettingsBtn.addEventListener('click', () => {
+            settingsModal.classList.remove('open');
+        });
+
+        saveSyncBtn.addEventListener('click', () => {
+            const cfg = {
+                csvUrl: csvUrlInput.value.trim(),
+                blogOnly: blogOnlyCheckbox.checked
+            };
+            saveConfig(cfg);
+            filterBadgeEl.classList.toggle('hidden', !cfg.blogOnly);
+            settingsModal.classList.remove('open');
+            syncFromSheets(true);
+        });
+
+        (function init() {
+            const cfg = loadConfig();
+            filterBadgeEl.classList.toggle('hidden', !cfg.blogOnly);
+
+            try {
+                const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
+                if (cached && Array.isArray(cached.tracks) && cached.tracks.length > 0) {
+                    tracksData = cached.tracks;
+                    if (!loadState()) {
+                        resetDeck();
+                        drawCard();
+                    }
+                }
+            } catch (e) {}
+
+            updateNavigationButtons();
+            renderCard();
+            if (cfg.csvUrl) {
+                syncFromSheets(false);
+            }
+        })();
+    </script>
+</body>
+</html>
